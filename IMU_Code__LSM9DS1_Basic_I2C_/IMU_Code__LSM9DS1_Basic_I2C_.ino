@@ -55,9 +55,9 @@
 *****************************************************************/
 // The SFE_LSM9DS1 library requires both Wire and SPI be
 // included BEFORE including the 9DS1 library.
-#include <Wire.h>
-#include <SPI.h>
-#include <SparkFunLSM9DS1.h>
+#include <Wire.h>              	// 
+#include <SPI.h>		// These should come preloaded on the Arduino IDE
+#include <SparkFunLSM9DS1.h>	// This can be found at https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library
 
 //////////////////////////
 // LSM9DS1 Library Init //
