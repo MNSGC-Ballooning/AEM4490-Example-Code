@@ -1,12 +1,12 @@
 /*                                                                                        |
- * University of Minnesota - Twin Cities                                                  |      |
- * AEM 4490 - Introduction to Aerospace Topics                                            |      |
+ * University of Minnesota - Twin Cities                                                  |     
+ * AEM 4490 - Introduction to Aerospace Topics                                            |      
  * GLEAM Project - Mesaurement Device component testing                                   |                                       |
- * Author: Joe Poeppel - poepp027@umn.edu                                                 |          |
- * Date: 2/24/2021                                                                        |
+ * Author: Joe Poeppel - poepp027@umn.edu                                                 |          
+ * Date: 2/25/2021                                                                        |
                                                                                           |
  * This program is to be used when testing component connections with the GLEAM DEVICE.   |
- * Simply change the number in line 99 in order to change which component is to be tested.|
+ * Simply change the number in line 130 in order to change which component is to be tested.|
  *                                                                                        | 
  * You may see values being printed to the serial monitor even if your component isn't    |
  * connected! Please use your discretion when determining if your component is working.   |
@@ -17,7 +17,6 @@
 #include <SparkFunLSM9DS1.h>                            // IMU  library                    - https://github.com/sparkfun/SparkFun_LSM9DS1_Arduino_Library
 #include <SFE_MicroOLED.h>                              // OLED library                    - https://learn.sparkfun.com/tutorials/micro-oled-breakout-hookup-guide/arduino-library-download-install-and-test
 
-
 // SENSOR LIBRARIES FOR YOUR RESPECTIVE I2C SENSOR
 #include <Adafruit_VEML6070.h>                          // VEML6070 I2C Sensor             - Go to Sketch > Include Library > Manage Libraries... > (search "VEML6070" and install library...click 'Install all' if needed)
 #include <Adafruit_VEML7700.h>                          // VEML7700 I2C Sensor             - Go to Sketch > Include Library > Manage Libraries... > (search "VEML7700" and install library...click 'Install all' if needed)
@@ -27,6 +26,13 @@
 // MICRO_OLED SETTINGS
 #define PIN_RESET 9                                     // The SFE_MicroOLED.h library assumes a reset pin is necessary.The Qwiic OLED has RST hard-wired, so pick an arbitrary IO pin that is not being used.
 #define DC_JUMPER 1                                     // The DC_JUMPER is the I2C Address Select jumper. Set to 1 if the jumper is open (default)
+
+// TEENSY 3.5 PIN CONNECTIONS
+#define THERM A17                                       // Analog pin 17 for thermistor
+#define PHOTO A16                                       // Analog pin 16 for photoresistor
+#define ANALOGSENSOR A18                                // Analog pin 18 for respective analog sensor
+#define LED1 24                                         // Digital pin for LED1
+#define LED2 25                                         // Digital pin for LED2
 
 // OBJECT DELCARATIONS
 MicroOLED oled(PIN_RESET, DC_JUMPER);                   // OLED Object
@@ -42,6 +48,21 @@ Adafruit_SI1145 SI = Adafruit_SI1145();                 // SI1145   Object
 String Data = "";
 String spacer = ", ";
 
+// THERMISTOR CONSTANTS and VARIABLES
+int analogResolutionBits = 14;                          // Sets the size (in bits) of the value returned by analogRead(). It defaults to 10 bits (returns values between 0-1023), but we can request greater accuracy by using more bits
+int analogResolutionVals = pow(2,analogResolutionBits); // Maximum possible analog resolution with base-2 math
+int adcMax = pow(2, analogResolutionBits) - 1.0;        // Maximum possible analog reading from thermistor (1024 values between 0-1023) (adc stands for analog-to-digital converter converts the analog signal from the sensor into a digital signal within the Teensy 3.5) 
+float A = 0.001125308852122;                            // Steinhart - Hart equation constant
+float B = 0.000234711863267;                            // Steinhart - Hart equation constant
+float C = 0.000000085663516;                            // Steinhart - Hart equation constant
+float R1 = 10000;                                       // Resistor value (in ohms) being used in series with the thermistor
+float ThermistorData;                                   // Analog value reading from thermistor
+float logR;                                             // Necessary log value used in Steinhart - Hart equation
+float Tinv;                                             // Temperature in degrees kelvin inverted
+float T;                                                // Temperature in degress kelvin
+float currentTempC;                                     // Temperature in degrees celcius
+float currentTempF;                                     // Temperature in degrees fahrenheit
+
 // IMU VARIABLES
 float magnetometer[3];                                  // Three element array for holding magnetometer values in x, y, z directions, respectively
 float accelerometer[3];                                 // Three element array for holding acceleration values in x, y, z directions, respectively
@@ -50,6 +71,12 @@ float roll;                                             // Roll of IMU
 float pitch;                                            // Pitch of IMU
 float heading;                                          // Heading of IMU
 float DECLINATION = -7.22;                              // Declination of Minneapolis, MN
+
+// PHOTOERSISTOR CONSTANTS and VARIABLES
+float PhotoresistorData;                                // Analog value reading from photoresistor
+
+// ANALOG SENSOR VARIABLES
+float AnalogSensorData;
 
 // VEML6070 SENSOR VARIABLES
 float VEML6070Data = 0;                                     
@@ -89,6 +116,10 @@ void updateVEML6070();
 void updateVEML7700();
 void updateAS7262();
 void updateSI1145();
+void updateANALOGSENSOR();
+void updateTHERMISTOR();
+void updatePHOTORESISTOR();
+void blinkLEDs();
 void printData();
 
 
@@ -96,7 +127,7 @@ void printData();
 
 
 // COMPONENT BEING TESTED
-int componentBeingTested = 1;                       // Options: OLED = 1, IMU = 2, VEML6070 = 3, VEML7700 = 4, AS7262 = 5, SI1145 = 6
+int componentBeingTested = 1;                       // Options: OLED = 1, IMU = 2, VEML6070 = 3, VEML7700 = 4, AS7262 = 5, SI1145 = 6, 7 = ANALOG SENSOR, 8 = THERMISTOR, 9 = PHOTORESISTOR, 10 = LEDs
 
 
 
@@ -115,6 +146,10 @@ void setup() {
      case 4: setupVEML7700(); break;
      case 5: setupAS7262(); break;
      case 6: setupSI1145(); break;
+     case 7: break;
+     case 8: break;
+     case 9: break;
+     case 10: pinMode(LED1, OUTPUT); pinMode(LED2, OUTPUT); break;
   }
 }
 
@@ -127,6 +162,10 @@ void loop() {
      case 4: updateVEML7700(); break;
      case 5: updateAS7262(); break;
      case 6: updateSI1145(); break;
+     case 7: updateANALOGSENSOR(); break;
+     case 8: updateTHERMISTOR(); break;
+     case 9: updatePHOTORESISTOR(); break;
+     case 10: blinkLEDs();
   }
   printData();
   delay(100);
@@ -193,7 +232,7 @@ void updateOLED() {
   oled.clear(PAGE);
   oled.setFontType(0);
   oled.setCursor(0,0);
-  oled.print("Hello!\nProgram\nruntime:\n" + String(millis()/1000));
+  oled.print("Hello!\nProgram\nruntime:\n\n" + String(millis()/1000));
   oled.display();
 }
 
@@ -260,6 +299,39 @@ void updateSI1145() {
    SI1145UV = SI.readUV() / 100.0;
 
    Data = String(SI1145Visible) + spacer + String(SI1145IR) + spacer + String(SI1145UV);
+}
+
+void updateANALOGSENSOR() {
+  AnalogSensorData = analogRead(ANALOGSENSOR);
+
+  Data = String(AnalogSensorData);
+}
+
+void updateTHERMISTOR() {
+  analogReadResolution(analogResolutionBits);
+  ThermistorData = analogRead(THERM);
+  logR = log(((adcMax/ThermistorData)-1)*R1);
+  Tinv = A + B * logR + C * logR * logR * logR;         // Steinhart - Hart equation
+  T = 1/Tinv;
+  currentTempC = T - 273.15;
+  currentTempF = currentTempC * 9 / 5 + 32;
+
+  Data = String(currentTempC) + " C, " + String(currentTempF) + " F";
+}
+
+void updatePHOTORESISTOR() {
+  PhotoresistorData = analogRead(PHOTO);
+
+  Data = String(PhotoresistorData);
+}
+
+void blinkLEDs() {
+   digitalWrite(LED1, HIGH);
+   digitalWrite(LED2, HIGH);
+   delay(100);
+   digitalWrite(LED1, LOW);
+   digitalWrite(LED2, LOW);
+   delay(1000);
 }
 
 void printData() {
