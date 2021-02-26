@@ -1,9 +1,9 @@
 /*                                                                                              |
  * University of Minnesota - Twin Cities                                                        |
  * AEM 4490 - Introduction to Aerospace Topics                                                  |
- * GLEAM Project - Device                                                                       |
+ * GLEAM Project - Measurement Device                                                           |
  * Author: Joe Poeppel - poepp027@umn.edu                                                       |
- * Date: 2/23/2021                                                                              |
+ * Date: 2/25/2021                                                                              |
  *                                                                                              | 
  * XBee Series 3 Mesh Network: Measurement Device for GLEAM Project                             |
  * This software is to be placed on the measurement units that are to collect data, log         |
@@ -29,7 +29,7 @@
                                                         //       located in the proper folder, Arduino (in this case Teensyduino) will be able to properly use the library.
                                                         
 // UNIT VARIABLE
-String Unit = "B1";                                     // *** MUST CHANGE THIS TO YOUR ASSIGNED UNIT (A1, A2, ..., B1, B2, ... C1, C2, ..., D1, D2, ...)
+String Unit = "B5";                                     // *** MUST CHANGE THIS TO YOUR ASSIGNED UNIT (A1, A2, ..., B1, B2, ... C1, C2, ..., D1, D2, ...)
 
 // SD CARD VARIABLES
 #define chipSelect BUILTIN_SDCARD                       // Using built in chipselect on Teensy 3.5
@@ -71,7 +71,7 @@ Adafruit_SI1145 SI = Adafruit_SI1145();                 // SI1145   Object
 String Data;                                            // String containing all data from sensors
 String spacer = ", ";                                   // Used to make creating Data and SDData strings quicker and more organized 
 String endline = "\n";                                  // Used to make creating Data and SDData strings quicker and more organized 
-String delimiter = "E";                                 // Used to make creating Data and SDData strings quicker and more organized - delimiter must be an uppercase 'E' in order for the GUR to properly read your data
+String delimiter = "Q";                                 // Used to make creating Data and SDData strings quicker and more organized - delimiter must be an uppercase 'E' in order for the GUR to properly read your data
 String timer;                                           // Hours/Minutes/Seconds
 String header;                                          // Used as first row of .csv file to distinguish logged data
 int delayLength = 0;                                    // Delay length (in milliseconds) between each main loop iteration
@@ -110,7 +110,7 @@ float AnalogSensorData;                                 // Analog sensor data
 String AnalogSensorBeingUsed = "GUVA-S12SD";            // *** MUST CHANGE THIS TO YOUR ASSIGNED ANALOG SENSOR ("GUVA-S12SD", "ALS-PT19")
 
 // GENERAL I2C SENSOR VARIABLES
-String I2CSensorBeingUsed = "AS7262";                   // *** MUST CHANGE THIS TO YOUR ASSIGNED I2C SENSOR ("VEML6070", "VEML7700", "AS7262", "SI1145")
+String I2CSensorBeingUsed = "VEML6070";                   // *** MUST CHANGE THIS TO YOUR ASSIGNED I2C SENSOR ("VEML6070", "VEML7700", "AS7262", "SI1145")
 
 // VEML6070 SENSOR VARIABLES
 float VEML6070Data;                                     
@@ -431,7 +431,7 @@ void updateI2CSensor(String I2CSensor) {
   else if (I2CSensor == "SI1145") {
     SI1145Visible = SI.readVisible();
     SI1145IR = SI.readIR();
-    SI1145UV = SI.readUV() / 1000;
+    SI1145UV = SI.readUV() / 100.0;
   }
 
   else {
@@ -528,18 +528,18 @@ void getHeader(String I2CSensor, String AnalogSensor) {
   }
 
   else if(I2CSensor == "VEML7700") {
-    header = header + String("VEML7700_Lux") + spacer + String("VEML7700_White") + String ("VEML7700_RawALS");
-    xBeeHeader = xBeeHeader + String("VEML7700_Lux") + spacer + String("VEML7700_White") + String ("VEML7700_RawALS") + delimiter;
+    header = header + String("Lux") + spacer + String("White") + String ("RawALS");
+    xBeeHeader = xBeeHeader + String("Lux") + spacer + String("White") + spacer + String ("RawALS") + delimiter;
   }
 
   else if(I2CSensor == "AS7262") {
-    header = header + String("AS7262_Temperature") + spacer + String("AS7262_Violet") + spacer + String("AS7262_Blue") + spacer + String("AS7262_Green") + spacer + String("AS7262_Yellow") + spacer + String("AS7262_Orange") + spacer + String("AS7262_Red");
-    xBeeHeader = xBeeHeader + String("AS7262_Temperature") + spacer + String("AS7262_Violet") + spacer + String("AS7262_Blue") + spacer + String("AS7262_Green") + spacer + String("AS7262_Yellow") + spacer + String("AS7262_Orange") + spacer + String("AS7262_Red") + delimiter;
+    header = header + String("Temperature") + spacer + String("Violet") + spacer + String("Blue") + spacer + String("Green") + spacer + String("Yellow") + spacer + String("Orange") + spacer + String("Red");
+    xBeeHeader = xBeeHeader + String("Temperature") + spacer + String("Violet") + spacer + String("Blue") + spacer + String("Green") + spacer + String("Yellow") + spacer + String("Orange") + spacer + String("Red") + delimiter;
   }
 
   else if(I2CSensor == "SI1145") {
-    header = header + String("SI1145_Visible") + spacer + String("SI1145_IR") + spacer + String("SI1145_UV");
-    xBeeHeader = xBeeHeader + String("SI1145_Visible") + spacer + String("SI1145_IR") + spacer + String("SI1145_UV") + delimiter;
+    header = header + String("Visible") + spacer + String("IR") + spacer + String("UV");
+    xBeeHeader = xBeeHeader + String("Visible") + spacer + String("IR") + spacer + String("UV") + delimiter;
   }
 
   else {
@@ -564,7 +564,7 @@ void getDisplay() {
       case 2: updateOLED("Gryo Vals" + endline + endline + "X: " + String(gyroscope[0]) + endline + "Y: " + String(gyroscope[1]) + endline + "Z: " + String(gyroscope[2])); break;
       case 3: updateOLED("Accel Vals" + endline + "X: " + String(accelerometer[0]) + endline + "Y: " + String(accelerometer[1]) + endline + "Z: " + String(accelerometer[2])); break;
       case 4: updateOLED("R: " + String(roll) + endline + endline + "P: " + String(pitch) + endline + endline + "H: " + String(heading)); break;
-      case 5: updateOLED(String(filename) + "\nLog: " + String(dataLogs) + "   " + endline + timer); break;
+      case 5: updateOLED(String(filename) + "\n\nLog: " + String(dataLogs) + "   " + endline + timer); break;
      }
   }
 } 
@@ -592,7 +592,7 @@ void blinkLED(int x) {
     }
   
     if(x != 1 && x != 2) {
-      {Serial.println("Error: 'x' value inputted into function 'blinkLED(x)' not valid! - - - Please use x = 1 or x = 2");}
+      {Serial.println("Error: 'x' value inputted into function 'blinkLED(x)' not valid! - - - Please use x = 1 or x = 2"); updateOLED("Error:\nblinkLED\nUse valid\nx input!");}
       while(1){}
     }
   }
@@ -604,10 +604,10 @@ void blinkLEDs(int x) {
     for (int i = 0; i<x; i++) {
       digitalWrite(LED1, HIGH);
       digitalWrite(LED2, HIGH);
-      delay(150);
+      delay(50);
       digitalWrite(LED1, LOW);
       digitalWrite(LED2, LOW);
-      delay(150);
+      delay(50);
     }
   }
 }
