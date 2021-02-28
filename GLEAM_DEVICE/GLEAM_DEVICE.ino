@@ -29,7 +29,7 @@
                                                         //       located in the proper folder, Arduino (in this case Teensyduino) will be able to properly use the library.
                                                         
 // UNIT VARIABLE
-String Unit = "B5";                                     // *** MUST CHANGE THIS TO YOUR ASSIGNED UNIT (A1, A2, ..., B1, B2, ... C1, C2, ..., D1, D2, ...)
+String Unit = "B5";                                     // *** MUST CHANGE THIS TO YOUR ASSIGNED UNIT (A1, A2, ..., A5; B1, B2, ..., B5; C1, C2, ..., C5; D1, D2, ..., D5)
 
 // SD CARD VARIABLES
 #define chipSelect BUILTIN_SDCARD                       // Using built in chipselect on Teensy 3.5
@@ -110,7 +110,7 @@ float AnalogSensorData;                                 // Analog sensor data
 String AnalogSensorBeingUsed = "GUVA-S12SD";            // *** MUST CHANGE THIS TO YOUR ASSIGNED ANALOG SENSOR ("GUVA-S12SD", "ALS-PT19")
 
 // GENERAL I2C SENSOR VARIABLES
-String I2CSensorBeingUsed = "VEML6070";                   // *** MUST CHANGE THIS TO YOUR ASSIGNED I2C SENSOR ("VEML6070", "VEML7700", "AS7262", "SI1145")
+String I2CSensorBeingUsed = "AS7262";                   // *** MUST CHANGE THIS TO YOUR ASSIGNED I2C SENSOR ("VEML6070", "VEML7700", "AS7262", "SI1145")
 
 // VEML6070 SENSOR VARIABLES
 float VEML6070Data;                                     
@@ -487,18 +487,18 @@ void updateSD(String text) {
 
 void updateXBee(String text) {
  if(xBee.available()) {
-  Serial.println("Data request received from GUT!\n");
+  Serial.println("\nData request received from GUT!\n");
   xBeeString = xBee.read();
    if (xBeeHeaderSent == false) {
     xBee.print(xBeeHeader);
     Serial.println(xBeeHeader);
-    Serial.println("Header sent to GUR!\n");
+    Serial.println("\nHeader sent to GUR!\n");
     xBeeHeaderSent = true;
    }
   else {
     xBee.print(text);
     Serial.println(text);
-    Serial.println("Data sent to GUR via xBee!\n");
+    Serial.println("\nData sent to GUR via xBee!\n");
     updateOLED("Request\nfrom GUT!\nData sent\nvia xBee\nto GUR!");
     displayTimer = millis();
     blinkLED(2);
@@ -552,12 +552,12 @@ void getHeader(String I2CSensor, String AnalogSensor) {
 void getDisplay() {
 
   if (millis() - displayTimer > 2000){                   // Allows the OLED to keep the message "Request from GUT! Data sent via xBee to GUR!" displayed for a longer period of time while still running code
-  
+    digitalWrite(LED2, LOW);
     if(digitalRead(buttonPin) == HIGH) {
        button++;
        if(button > 5) button = 0;
      }
-     
+  
    switch(button) {
       case 0: updateOLED(String(currentTempF)+ " F" + endline + String(currentTempC) + " C" + endline + String(PhotoresistorData) + endline + String(AnalogSensorData)); break;
       case 1: updateOLED("Mag Vals" + endline + endline + "X: " + String(magnetometer[0]) + endline + "Y: " + String(magnetometer[1]) + endline + "Z: " + String(magnetometer[2])); break;
@@ -567,6 +567,8 @@ void getDisplay() {
       case 5: updateOLED(String(filename) + "\n\nLog: " + String(dataLogs) + "   " + endline + timer); break;
      }
   }
+
+  else {digitalWrite(LED2, HIGH);}
 } 
 
 void updateTimer() {
