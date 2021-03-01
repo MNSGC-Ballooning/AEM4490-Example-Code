@@ -186,8 +186,6 @@ void setupOLED() {
     oled.clear(PAGE);
     randomSeed(analogRead(A0) + analogRead(A1));
     delay(250);
-    Serial.println("OLED online!");
-    delay(500);
   }
 }
 
